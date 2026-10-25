@@ -7,8 +7,13 @@ const MOCK = {
   itinerary: ["Day 1: Asakusa and Ueno", "Day 2: Shibuya and Harajuku", "Day 3: Day trip to Nikko"]
 };
 
-document.getElementById("planBtn").addEventListener("click", () => {
-  document.getElementById("agents").innerHTML = MOCK.agents.map(a => `
+document.getElementById("planBtn").addEventListener("click", async() => {
+     let data = MOCK;
+   try {
+     const res = await fetch("http://localhost:3000/plan-trip");
+     data = await res.json();
+   } catch (e) { console.log("Backend not running, using fake data"); }
+  document.getElementById("agents").innerHTML = data.agents.map(a => `
     <div class="card ${a.hired ? "hired" : "blocked"}">
       <h3>${a.name}</h3>
       <p>Registered: ${a.registered ? "✓" : "✗"}</p>
@@ -17,5 +22,5 @@ document.getElementById("planBtn").addEventListener("click", () => {
     </div>`).join("");
 
   document.getElementById("itinerary").innerHTML =
-    "<h2>Your itinerary</h2>" + MOCK.itinerary.map(d => `<p>${d}</p>`).join("");
+    "<h2>Your itinerary</h2>" + data.itinerary.map(d => `<p>${d}</p>`).join("");
 });
