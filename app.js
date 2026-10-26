@@ -13,7 +13,7 @@ document.getElementById("planBtn").addEventListener("click", async () => {
 
   let data = MOCK;
   try {
-    const res = await fetch("http://localhost:3000/plan-trip");
+    const res = await fetch("http://localhost:3000/plan-trip?q=" + encodeURIComponent(document.getElementById("tripInput").value));
     if (!res.ok) throw new Error("backend error");
     data = await res.json();
   } catch (e) {
@@ -24,7 +24,7 @@ document.getElementById("planBtn").addEventListener("click", async () => {
     <div class="card ${a.hired ? "hired" : "blocked"}">
       <h3>${a.name}</h3>
       <p>Registered: ${a.registered ? "✓" : "✗"}</p>
-      <p>Score: ${a.score} · Confidence: ${a.confidence}</p>
+      <p>Score: ${a.score} · Confidence: ${a.confidence} · Reviewers: ${a.reviewers ?? 0}</p>
       <strong>${a.hired ? "HIRED" : "BLOCKED: " + a.reason}</strong>
       ${a.registered ? `<p><a href="https://solscan.io/account/${a.address}?cluster=devnet" target="_blank">Agent on Solscan</a>${a.txSignature ? ` · <a href="https://solscan.io/tx/${a.txSignature}?cluster=devnet" target="_blank">Feedback tx</a>` : ""}</p>` : ""}
     </div>`).join("");

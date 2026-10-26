@@ -27,7 +27,8 @@ async function checkAgent(key) {
   const asset = new PublicKey(info.asset);
   const out = {
     key, name: info.name, address: info.asset,
-    registered: false, score: 0, confidence: "none", hired: false, txSignature: "",
+    registered: false, score: 0, confidence: "none", reviewers: 0,
+    hired: false, txSignature: "",
   };
 
   const account = await readSdk.loadAgent(asset); // identity
@@ -39,31 +40,74 @@ async function checkAgent(key) {
 
   const all = await readSdk.readAllFeedback(asset); // reputation
   const valid = all.filter((f) => !f.revoked && typeof f.score === "number");
-  if (valid.length === 0) {
+
+  // Anti-spam: only each reviewer's LATEST review counts,
+  // so one wallet cannot inflate a score by reviewing many times
+  const latest = new Map();
+  for (const f of valid) {
+    const who = f.client.toBase58();
+    const prev = latest.get(who);
+    if (!prev || f.feedbackIndex > prev.feedbackIndex) latest.set(who, f);
+  }
+  const reviews = [...latest.values()];
+  out.reviewers = reviews.length;
+
+  if (reviews.length === 0) {
     out.reason = "No reputation yet";
     return out;
   }
-  out.score = Math.round(valid.reduce((s, f) => s + f.score, 0) / valid.length);
-  out.confidence = valid.length >= 5 ? "high" : valid.length >= 2 ? "medium" : "low";
+  out.score = Math.round(reviews.reduce((s, f) => s + f.score, 0) / reviews.length);
+  out.confidence = reviews.length >= 3 ? "high" : reviews.length === 2 ? "medium" : "low";
 
   if (out.score >= MIN_SCORE) out.hired = true;
   else out.reason = `Reputation ${out.score} is below ${MIN_SCORE}`;
   return out;
 }
 
-const itinerary = [
-  "Day 1: Asakusa and Ueno",
-  "Day 2: Shibuya and Harajuku",
-  "Day 3: Day trip to Nikko",
+// Demo itineraries by destination (demo data)
+const ITINERARIES = {
+  tokyo: [
+    "Day 1: Asakusa and Ueno",
+    "Day 2: Shibuya and Harajuku",
+    "Day 3: Day trip to Nikko",
+  ],
+  china: [
+    "Day 1: Forbidden City and Tiananmen Square (Beijing)",
+    "Day 2: Great Wall at Mutianyu",
+    "Day 3: Temple of Heaven and a hutong food walk",
+  ],
+  goa: [
+    "Day 1: Baga and Calangute beaches",
+    "Day 2: Old Goa churches and Fontainhas",
+    "Day 3: Fort Aguada and a sunset at Chapora",
+  ],
+};
+const ALIASES = { japan: "tokyo", beijing: "china", shanghai: "china" };
+const GENERIC = [
+  "Day 1: Arrive and explore the city centre",
+  "Day 2: Top sights and local food",
+  "Day 3: Relax, shop and head home",
 ];
 
-// Simple validator: is the plan complete (3 days)?
-const validate = () => itinerary.length === 3;
+function pickItinerary(text = "") {
+  const t = String(text).toLowerCase();
+  for (const key of Object.keys(ITINERARIES)) {
+    if (t.includes(key)) return ITINERARIES[key];
+  }
+  for (const alias of Object.keys(ALIASES)) {
+    if (t.includes(alias)) return ITINERARIES[ALIASES[alias]];
+  }
+  return GENERIC;
+}
 
 async function handler(req, res) {
   try {
-    const results = await Promise.all(["flight", "hotel", "budget", "rogue"].map(checkAgent));
-    const ok = validate();
+    const itinerary = pickItinerary(req.query.q);
+    const ok = itinerary.length === 3; // simple validator: is the plan complete?
+
+    const results = await Promise.all(
+      ["flight", "hotel", "budget", "rogue"].map(checkAgent)
+    );
 
     // After the job, the planner writes feedback onchain for each agent it hired
     await Promise.all(
