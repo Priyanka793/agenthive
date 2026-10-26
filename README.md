@@ -53,17 +53,19 @@ node make-wallet.js          # creates wallet.json (keep it private!)
 # get free devnet SOL for the printed address at https://faucet.solana.com
 node register-agents.js      # registers Flight + Hotel agents on devnet
 node seed-feedback.js        # creates planner wallet + first reviews
+node add-lowrep-agent.js     # registers a low-reputation demo agent
+node add-reviewers.js        # adds two more reviewer wallets
 node server.js               # starts the API on http://localhost:3000
 ```
 
 Then open `frontend/index.html` (for example with the VS Code Live Server extension) and click **Plan my trip**.
 
-> Never commit `wallet.json` or `planner-wallet.json`. They are in `.gitignore`.
+> Never commit `wallet.json` or any `*-wallet.json` file (planner and reviewer wallets). They hold private keys.
 
 ## Honest limits
 
 - The flight, hotel and itinerary results are demo data. The Registry parts (identity, reputation, feedback) are real and onchain.
-- Reputation is a plain average of onchain feedback scores. A production version should weight reviewers, count distinct clients, and resist fake reviews (for example with the SDK's ATOM engine and ProofPass).
+- Reputation is the average of each reviewer wallet’s latest score, so one wallet can’t inflate a score by reviewing many times. The demo uses three reviewer wallets we control. A production version should also weight reviewers by their own reputation and use the SDK’s ATOM and ProofPass features.
 - Devnet only.
 
 ## Licence
