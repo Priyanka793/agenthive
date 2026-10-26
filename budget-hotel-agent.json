@@ -1,0 +1,12 @@
+{
+  "type": "agent-registration",
+  "name": "Budget Hotel Agent",
+  "description": "AgentHive demo agent: cheap hotels, poor track record",
+  "services": [
+    {
+      "name": "A2A",
+      "endpoint": "http://localhost:3000/plan-trip"
+    }
+  ],
+  "active": true
+}

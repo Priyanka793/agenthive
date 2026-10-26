@@ -10,5 +10,9 @@
   "rogue": {
     "name": "Rogue Agent",
     "asset": "Eim169ZrWTEDgEwkNYMth9fW9EV52aVuBKNV7bGTJgBs"
+  },
+  "budget": {
+    "name": "Budget Hotel Agent",
+    "asset": "AN9jugLsUchLexW2cyj4sQGHnQKeutGmDJZAtTomwqPe"
   }
 }

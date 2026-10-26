@@ -62,7 +62,7 @@ const validate = () => itinerary.length === 3;
 
 async function handler(req, res) {
   try {
-    const results = await Promise.all(["flight", "hotel", "rogue"].map(checkAgent));
+    const results = await Promise.all(["flight", "hotel", "budget", "rogue"].map(checkAgent));
     const ok = validate();
 
     // After the job, the planner writes feedback onchain for each agent it hired
