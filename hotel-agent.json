@@ -1,0 +1,12 @@
+{
+  "type": "agent-registration",
+  "name": "Hotel Recommender",
+  "description": "AgentHive demo agent: hotel recommendation",
+  "services": [
+    {
+      "name": "A2A",
+      "endpoint": "http://localhost:3000/plan-trip"
+    }
+  ],
+  "active": true
+}

@@ -1,0 +1,14 @@
+{
+  "flight": {
+    "name": "Flight Search Agent",
+    "asset": "7DDJELD7PUPXFCjRwPCWfkbadsPSE5rZ3TRKimzjpG3L"
+  },
+  "hotel": {
+    "name": "Hotel Recommender",
+    "asset": "D1BZu3TWGiSXh5tHFjfZGMgwzQPQ4amS9KpTGvNmDAs"
+  },
+  "rogue": {
+    "name": "Rogue Agent",
+    "asset": "Eim169ZrWTEDgEwkNYMth9fW9EV52aVuBKNV7bGTJgBs"
+  }
+}

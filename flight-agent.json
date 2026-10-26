@@ -1,0 +1,12 @@
+{
+  "type": "agent-registration",
+  "name": "Flight Search Agent",
+  "description": "AgentHive demo agent: flight search",
+  "services": [
+    {
+      "name": "A2A",
+      "endpoint": "http://localhost:3000/plan-trip"
+    }
+  ],
+  "active": true
+}
