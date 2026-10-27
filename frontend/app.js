@@ -23,10 +23,15 @@ function cardHtml(a) {
   const label =
     status === "chosen" ? "CHOSEN (hired)" :
     status === "passed" ? "TRUSTED, NOT CHOSEN" : "BLOCKED";
+  const short = (w) => w.slice(0, 4) + "…" + w.slice(-4);
+  const evidence = a.evidence && a.evidence.length
+    ? `<p><em>Onchain reviews (latest per reviewer):</em></p>` +
+      a.evidence.map(e => `<p class="review">Reviewer <a href="https://explorer.solana.com/address/${e.reviewer}?cluster=devnet" target="_blank">${short(e.reviewer)}</a> gave ${e.score}</p>`).join("")
+    : "";
   const links = a.registered
-    ? `<p><a href="https://solscan.io/account/${a.address}?cluster=devnet" target="_blank">Agent on Solscan</a>${
+    ? `<p><a href="https://explorer.solana.com/address/${a.address}?cluster=devnet" target="_blank">Agent on Solscan</a>${
         a.txSignature
-          ? ` · <a href="https://solscan.io/tx/${a.txSignature}?cluster=devnet" target="_blank">Feedback written onchain</a>`
+          ? ` · <a href="https://explorer.solana.com/tx/${a.txSignature}?cluster=devnet" target="_blank">Feedback written onchain</a>`
           : ""
       }</p>`
     : "";
@@ -35,6 +40,7 @@ function cardHtml(a) {
       <h3>${a.name}</h3>
       <p>Registered in the Registry: ${a.registered ? "✓ yes" : "✗ no"}</p>
       <p>Score: ${a.score} · Confidence: ${a.confidence} · Reviewers: ${a.reviewers ?? 0}</p>
+      ${evidence}
       <strong>${label}</strong>
       <p>${a.reason || ""}</p>
       ${links}
@@ -83,8 +89,15 @@ document.getElementById("planBtn").addEventListener("click", async () => {
 
   document.getElementById("agents").innerHTML = renderAgents(data);
 
-    const t = data.transport;
+      const t = data.transport;
+  const v = data.validation;
+  const validationHtml = v
+    ? "<h2>Validation</h2>" +
+      v.checks.map(c => `<p>${c.pass ? "✓" : "✗"} ${c.label}</p>`).join("") +
+      `<p><strong>${v.ok ? "Plan accepted" : "Plan failed validation"}. Feedback score written for hired agents: ${v.feedbackScore}</strong></p>`
+    : "";
   document.getElementById("itinerary").innerHTML =
     "<h2>Your itinerary</h2>" + data.itinerary.map(d => `<p>${d}</p>`).join("") +
-    (t ? `<h2>Getting around</h2><p><strong>Best way: ${t.best}</strong></p>` + t.tips.map(x => `<p>${x}</p>`).join("") : "");
+    (t ? `<h2>Getting around</h2><p><strong>Best way: ${t.best}</strong></p>` + t.tips.map(x => `<p>${x}</p>`).join("") : "") +
+    validationHtml;
 });
