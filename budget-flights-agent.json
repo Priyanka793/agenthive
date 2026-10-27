@@ -1,0 +1,7 @@
+{
+  "type": "agent-registration",
+  "name": "Budget Flights Agent",
+  "description": "AgentHive demo agent: cheaper flights, decent track record",
+  "services": [{ "name": "A2A", "endpoint": "http://localhost:3000/plan-trip" }],
+  "active": true
+}
