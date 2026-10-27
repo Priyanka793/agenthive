@@ -83,6 +83,8 @@ document.getElementById("planBtn").addEventListener("click", async () => {
 
   document.getElementById("agents").innerHTML = renderAgents(data);
 
+    const t = data.transport;
   document.getElementById("itinerary").innerHTML =
-    "<h2>Your itinerary</h2>" + data.itinerary.map(d => `<p>${d}</p>`).join("");
+    "<h2>Your itinerary</h2>" + data.itinerary.map(d => `<p>${d}</p>`).join("") +
+    (t ? `<h2>Getting around</h2><p><strong>Best way: ${t.best}</strong></p>` + t.tips.map(x => `<p>${x}</p>`).join("") : "");
 });

@@ -141,6 +141,52 @@ function pickItinerary(text = "") {
 }
 
 async function handler(req, res) {
+  // Local transport tips by destination (demo data: typical tips, not live information)
+const TRANSPORT = {
+  tokyo: {
+    best: "Shinkansen (bullet train) between cities, JR trains and Metro inside Tokyo",
+    tips: [
+      "Airport to city: Narita Express or Keisei Skyliner",
+      "Get a Suica or Pasmo card for trains, metro and buses",
+      "Day 3 Nikko: Tobu limited express train from Asakusa",
+    ],
+  },
+  china: {
+    best: "High-speed rail (G trains) between cities, Metro inside the city",
+    tips: [
+      "Airport to Beijing centre: Airport Express train, then Metro",
+      "The Beijing Subway reaches most sights, such as Tiananmen and the Temple of Heaven",
+      "Great Wall at Mutianyu: tour bus or private car from the city (about 1.5 hours)",
+    ],
+  },
+  goa: {
+    best: "Rented scooter or taxi (Goa has no metro)",
+    tips: [
+      "Rent a scooter for the beaches, with a valid licence and a helmet",
+      "Use pre-booked or app-based taxis for longer trips",
+      "Arrive by Konkan Railway (Madgaon or Thivim) or by air",
+    ],
+  },
+  generic: {
+    best: "Metro or train inside the city, taxi when needed",
+    tips: [
+      "Airport to city: airport train or metro if available, otherwise a taxi",
+      "Buy a local transit card for the city",
+      "Use trains for trips to nearby cities",
+    ],
+  },
+};
+
+function pickTransport(text = "") {
+  const t = String(text).toLowerCase();
+  for (const key of ["tokyo", "china", "goa"]) {
+    if (t.includes(key)) return TRANSPORT[key];
+  }
+  for (const alias of Object.keys(ALIASES)) {
+    if (t.includes(alias)) return TRANSPORT[ALIASES[alias]];
+  }
+  return TRANSPORT.generic;
+}
   try {
     const itinerary = pickItinerary(req.query.q);
     const ok = itinerary.length === 3; // simple validator: is the plan complete?
@@ -169,7 +215,7 @@ async function handler(req, res) {
       })
     );
 
-    res.json({ agents: results, selection, itinerary });
+    res.json({ agents: results, selection, itinerary, transport: pickTransport(req.query.q) });
   } catch (e) {
     console.log(e);
     res.status(500).json({ error: e.message });
