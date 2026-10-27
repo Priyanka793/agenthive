@@ -39,7 +39,7 @@ async function checkAgent(key) {
   const out = {
     key, name: info.name, role: roleOf(key), address: info.asset,
     registered: false, score: 0, confidence: "none", reviewers: 0,
-    passed: false, hired: false, status: "blocked", txSignature: "",
+    passed: false, hired: false, status: "blocked", txSignature: "", evidence: [],
   };
 
   const account = await readSdk.loadAgent(asset); // identity
@@ -62,6 +62,7 @@ async function checkAgent(key) {
   }
   const reviews = [...latest.values()];
   out.reviewers = reviews.length;
+  out.evidence = reviews.map((f) => ({ reviewer: f.client.toBase58(), score: f.score }));
 
   if (reviews.length === 0) {
     out.reason = "No reputation yet";
@@ -140,8 +141,7 @@ function pickItinerary(text = "") {
   return GENERIC;
 }
 
-async function handler(req, res) {
-  // Local transport tips by destination (demo data: typical tips, not live information)
+// Local transport tips by destination (demo data: typical tips, not live information)
 const TRANSPORT = {
   tokyo: {
     best: "Shinkansen (bullet train) between cities, JR trains and Metro inside Tokyo",
@@ -187,9 +187,10 @@ function pickTransport(text = "") {
   }
   return TRANSPORT.generic;
 }
+
+async function handler(req, res) {
   try {
     const itinerary = pickItinerary(req.query.q);
-    const ok = itinerary.length === 3; // simple validator: is the plan complete?
 
     // 1. Check every candidate agent (identity + reputation)
     const keys = Object.keys(agents).filter((k) => roleOf(k));
@@ -198,7 +199,14 @@ function pickTransport(text = "") {
     // 2. Choose the best trusted agent for each job
     const selection = selectBest(results);
 
-    // 3. After the job, the planner writes feedback onchain ONLY for the agents it hired
+    // 3. VALIDATION: check the finished plan. The result decides the feedback score.
+    const checks = [
+      { label: "Itinerary has 3 days", pass: itinerary.length === 3 },
+      { label: "A trusted agent was hired for every job", pass: Object.values(selection).every((x) => x !== null) },
+    ];
+    const ok = checks.every((c) => c.pass);
+
+    // 4. After the job, the planner writes feedback onchain ONLY for the agents it hired
     await Promise.all(
       results.filter((r) => r.hired).map(async (r) => {
         try {
@@ -215,7 +223,13 @@ function pickTransport(text = "") {
       })
     );
 
-    res.json({ agents: results, selection, itinerary, transport: pickTransport(req.query.q) });
+    res.json({
+      agents: results,
+      selection,
+      itinerary,
+      transport: pickTransport(req.query.q),
+      validation: { ok, checks, feedbackScore: ok ? 90 : 30 },
+    });
   } catch (e) {
     console.log(e);
     res.status(500).json({ error: e.message });
