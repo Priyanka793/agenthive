@@ -19,16 +19,27 @@ async function init() {
   writeSdk = new SolanaSDK({ cluster: "devnet", signer: planner });
 }
 
-const MIN_SCORE = 70; // the Trust Gate: hire only agents with reputation >= 70
+const MIN_SCORE = 70; // the Trust Gate: only agents with reputation >= 70 can be hired
+
+// Which job each candidate agent applies for.
+// The planner picks ONE agent per job (the best one that passes the Trust Gate).
+const ROLES = {
+  flight: "flight",
+  flight2: "flight",
+  hotel: "hotel",
+  budget: "hotel",
+  rogue: "hotel",
+};
+const roleOf = (key) => agents[key].role || ROLES[key];
 
 // TRUST GATE: identity + reputation, both read from the Solana Agent Registry
 async function checkAgent(key) {
   const info = agents[key];
   const asset = new PublicKey(info.asset);
   const out = {
-    key, name: info.name, address: info.asset,
+    key, name: info.name, role: roleOf(key), address: info.asset,
     registered: false, score: 0, confidence: "none", reviewers: 0,
-    hired: false, txSignature: "",
+    passed: false, hired: false, status: "blocked", txSignature: "",
   };
 
   const account = await readSdk.loadAgent(asset); // identity
@@ -59,9 +70,38 @@ async function checkAgent(key) {
   out.score = Math.round(reviews.reduce((s, f) => s + f.score, 0) / reviews.length);
   out.confidence = reviews.length >= 3 ? "high" : reviews.length === 2 ? "medium" : "low";
 
-  if (out.score >= MIN_SCORE) out.hired = true;
+  if (out.score >= MIN_SCORE) out.passed = true;
   else out.reason = `Reputation ${out.score} is below ${MIN_SCORE}`;
   return out;
+}
+
+// SELECTION: for each job, choose the best agent that passed the Trust Gate.
+// Best = highest score; if tied, the one with more distinct reviewers.
+function selectBest(results) {
+  const roles = [...new Set(results.map((r) => r.role))];
+  const selection = {};
+  for (const role of roles) {
+    const candidates = results.filter((r) => r.role === role);
+    const passing = candidates
+      .filter((r) => r.passed)
+      .sort((a, b) => b.score - a.score || b.reviewers - a.reviewers);
+
+    if (passing.length === 0) {
+      selection[role] = null; // nobody trustworthy for this job
+      continue;
+    }
+    const winner = passing[0];
+    winner.hired = true;
+    winner.status = "chosen";
+    winner.reason = `Chosen: best score (${winner.score}) among ${passing.length} trusted ${role} agent(s)`;
+    selection[role] = { key: winner.key, name: winner.name, score: winner.score };
+
+    for (const r of passing.slice(1)) {
+      r.status = "passed";
+      r.reason = `Passed the Trust Gate (score ${r.score}) but not chosen: ${winner.name} ranks higher (${winner.score})`;
+    }
+  }
+  return selection;
 }
 
 // Demo itineraries by destination (demo data)
@@ -105,11 +145,14 @@ async function handler(req, res) {
     const itinerary = pickItinerary(req.query.q);
     const ok = itinerary.length === 3; // simple validator: is the plan complete?
 
-    const results = await Promise.all(
-      ["flight", "hotel", "budget", "rogue"].map(checkAgent)
-    );
+    // 1. Check every candidate agent (identity + reputation)
+    const keys = Object.keys(agents).filter((k) => roleOf(k));
+    const results = await Promise.all(keys.map(checkAgent));
 
-    // After the job, the planner writes feedback onchain for each agent it hired
+    // 2. Choose the best trusted agent for each job
+    const selection = selectBest(results);
+
+    // 3. After the job, the planner writes feedback onchain ONLY for the agents it hired
     await Promise.all(
       results.filter((r) => r.hired).map(async (r) => {
         try {
@@ -126,7 +169,7 @@ async function handler(req, res) {
       })
     );
 
-    res.json({ agents: results, itinerary });
+    res.json({ agents: results, selection, itinerary });
   } catch (e) {
     console.log(e);
     res.status(500).json({ error: e.message });
